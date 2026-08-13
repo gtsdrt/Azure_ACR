@@ -6,7 +6,7 @@ on:
       tag:
         description: "要部署的镜像 tag（ACR 中已存在的，如 v7）"
         required: true
-        default: "v7"
+        default: "v10"
 
 permissions:
   id-token: write
