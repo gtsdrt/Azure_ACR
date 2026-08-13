@@ -1,0 +1,19 @@
+# playbooks/junos_get_interface_config.yml
+- name: Get Juniper interface configuration
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - junipernetworks.junos
+  tasks:
+    - name: Get config
+      junipernetworks.junos.junos_config:
+        host: "{{ device_host }}"
+        user: "{{ lookup('env', 'JUNOS_USERNAME') }}"
+        passwd: "{{ lookup('env', 'JUNOS_PASSWORD') }}"
+        retrieve: "committed"
+        filter: "<configuration><interfaces/></configuration>"
+        format: xml
+      register: result
+    - name: Output
+      ansible.builtin.debug:
+        var: result.config

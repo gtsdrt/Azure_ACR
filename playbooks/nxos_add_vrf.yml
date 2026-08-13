@@ -1,0 +1,18 @@
+- name: Add VRF on NX-OS device
+  hosts: localhost
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: cisco.nxos.nxos
+    ansible_host: "{{ device_host }}"          # 目标设备由调用参数指定（参数即 inventory）
+    ansible_user: "{{ lookup('env', 'NXOS_USERNAME') }}"
+    ansible_password: "{{ lookup('env', 'NXOS_PASSWORD') }}"
+  tasks:
+    - name: Ensure VRF exists
+      cisco.nxos.nxos_vrf:
+        name: "{{ vrf_name }}"
+        state: present
+      register: result
+    - name: Output
+      ansible.builtin.debug:
+        var: result
