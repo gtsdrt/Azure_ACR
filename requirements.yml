@@ -1,0 +1,11 @@
+collections:
+  - name: ansible.posix
+  - name: cisco.meraki
+  - name: ansible.utils
+  - name: ansible.netcommon
+  - name: cisco.nxos
+  - name: cisco.nd
+  - name: cisco.ios
+  - name: cisco.iosxr
+  - name: paloaltonetworks.panos
+  - name: junipernetworks.junos
