@@ -1,0 +1,15 @@
+- name: Get Meraki switch port live statuses
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  collections:
+    - cisco.meraki
+  tasks:
+    - name: Get switch port statuses
+      cisco.meraki.devices_switch_ports_statuses_info:
+        meraki_api_key: "{{ lookup('env', 'MERAKI_DASHBOARD_API_KEY') }}"
+        serial: "{{ serial }}"
+      register: result
+    - name: Output
+      ansible.builtin.debug:
+        var: result.meraki_response
