@@ -1,0 +1,60 @@
+---
+- name: Create custom subnets in existing VNet
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  collections:
+    - azure.azcollection
+  vars:
+    ansible_python_interpreter: /usr/local/bin/python3.11
+
+    resource_group: "{{ resource_group_name | default('az_ansible') }}"
+    vnet_name: "{{ vnet_name | default('az_ansible_vnet1') }}"
+
+    # 逗号分隔的子网名称，例如 "test1,test2,test3"
+    subnet_names: "{{ subnet_names | default('') }}"
+    # 逗号分隔的子网地址前缀，例如 "10.0.20.0/24,10.0.21.0/24"
+    subnet_prefixes: "{{ subnet_prefixes | default('') }}"
+
+  tasks:
+    - name: Check AZURE_SUBSCRIPTION_ID env var
+      ansible.builtin.fail:
+        msg: "Environment variable AZURE_SUBSCRIPTION_ID is not set in Container App"
+      when: lookup('env', 'AZURE_SUBSCRIPTION_ID') | length == 0
+
+    - name: Ensure VNet exists
+      azure.azcollection.azure_rm_virtualnetwork_info:
+        auth_source: msi
+        subscription_id: "{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}"
+        resource_group: "{{ resource_group }}"
+        name: "{{ vnet_name }}"
+      register: vnet_info
+      failed_when: vnet_info.virtualnetworks | length == 0
+      changed_when: false
+
+    - name: Build subnet list
+      ansible.builtin.set_fact:
+        subnet_list: "{{ subnet_names.split(',') | map('trim') | list }}"
+        prefix_list: "{{ subnet_prefixes.split(',') | map('trim') | list }}"
+
+    - name: Create subnets
+      azure.azcollection.azure_rm_subnet:
+        auth_source: msi
+        subscription_id: "{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}"
+        resource_group: "{{ resource_group }}"
+        name: "{{ subnet_list[item_index] }}"
+        address_prefix: "{{ prefix_list[item_index] }}"
+        virtual_network: "{{ vnet_name }}"
+        delegations:
+          - name: Microsoft.App.environments
+            serviceName: Microsoft.App/environments
+      loop: "{{ range(0, subnet_list | length) | list }}"
+      loop_control:
+        index_var: item_index
+      when: subnet_names | length > 0 and subnet_prefixes | length > 0 and subnet_list | length == prefix_list | length
+
+    - name: Output summary
+      ansible.builtin.debug:
+        msg:
+          vnet: "{{ vnet_name }}"
+          created_subnets: "{{ subnet_list }}"

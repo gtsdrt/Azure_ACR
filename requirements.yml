@@ -9,3 +9,5 @@ collections:
   - name: cisco.iosxr
   - name: paloaltonetworks.panos
   - name: junipernetworks.junos
+  - name: azure.azcollection
+    version: 3.21.0

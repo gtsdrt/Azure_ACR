@@ -1,0 +1,61 @@
+---
+- name: Create Azure VNet in specified Resource Group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  collections:
+    - azure.azcollection
+  vars:
+    ansible_python_interpreter: /usr/local/bin/python3.11
+    resource_group: "{{ resource_group_name | default('my-resource-group') }}"
+    vnet_name: "{{ vnet_name_override | default('my-vnet') }}"
+    location: "{{ azure_location | default('norwayeast') }}"
+    address_prefix: "10.0.0.0/16"
+    subnet_name: "{{ subnet_name_override | default('infrastructure-subnet') }}"
+    subnet_prefix: "10.0.0.0/24"
+
+  tasks:
+    - name: Check AZURE_SUBSCRIPTION_ID env var
+      ansible.builtin.fail:
+        msg: "Environment variable AZURE_SUBSCRIPTION_ID is not set in Container App"
+      when: lookup('env', 'AZURE_SUBSCRIPTION_ID') | length == 0
+
+    - name: Create or update Resource Group
+      azure.azcollection.azure_rm_resourcegroup:
+        auth_source: msi
+        subscription_id: "{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}"
+        name: "{{ resource_group }}"
+        location: "{{ location }}"
+      register: rg
+
+    - name: Create Virtual Network
+      azure.azcollection.azure_rm_virtualnetwork:
+        auth_source: msi
+        subscription_id: "{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}"
+        resource_group: "{{ resource_group }}"
+        name: "{{ vnet_name }}"
+        address_prefixes:
+          - "{{ address_prefix }}"
+      register: vnet
+
+    - name: Create Subnet for Container Apps
+      azure.azcollection.azure_rm_subnet:
+        auth_source: msi
+        subscription_id: "{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}"
+        resource_group: "{{ resource_group }}"
+        name: "{{ subnet_name }}"
+        address_prefix: "{{ subnet_prefix }}"
+        virtual_network: "{{ vnet_name }}"
+        delegations:
+          - name: Microsoft.App.environments
+            serviceName: Microsoft.App/environments
+      register: subnet
+
+    - name: Output results
+      ansible.builtin.debug:
+        msg:
+          resource_group: "{{ resource_group }}"
+          vnet_name: "{{ vnet_name }}"
+          subnet_name: "{{ subnet_name }}"
+          vnet_id: "{{ vnet.state.id | default('N/A') }}"
+          subnet_id: "{{ subnet.state.id | default('N/A') }}"

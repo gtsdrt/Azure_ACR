@@ -11,23 +11,30 @@ app = FastAPI()
 API_KEY = os.getenv("API_KEY", "change-me")
 MERAKI_DASHBOARD_API_KEY = os.getenv("MERAKI_DASHBOARD_API_KEY")
 
-# ===== 内置任务注册表 =====
-# 以后加功能 = playbooks/ 目录加一个 yml 文件 + 这里加一行，Function App 零改动
 PLAYBOOK_DIR = Path(os.getenv("PLAYBOOK_DIR", "/opt/ansible/playbooks"))
 
 TASK_REGISTRY = {
-    # 任务名: (playbook 文件名, 必填参数列表)
-    # --- Meraki（只读） ---
     "meraki_get_switch_ports":          ("meraki_get_switch_ports.yml",          ["serial"]),
     "meraki_get_switch_port_statuses":  ("meraki_get_switch_port_statuses.yml",  ["serial"]),
-    # --- NX-OS（写操作，nxos_config_ 前缀 = 变更类任务） ---
     "nxos_config_add_vrf":              ("nxos_add_vrf.yml",                     ["device_host", "vrf_name"]),
+    "azure_create_vnet":                ("azure_create_vnet.yml",                ["resource_group_name", "vnet_name", "location"]),
+    "azure_create_subnets":             ("azure_create_subnets.yml", ["resource_group_name", "vnet_name", "subnet_names", "subnet_prefixes"]),
+    "azure_create_nsg":                 ("azure_create_nsg.yml", ["resource_group_name", "nsg_names"]),
+    "azure_associate_subnet_nsg":       ("azure_associate_subnet_nsg.yml", ["resource_group_name", "vnet_name", "nsg_name", "subnet_names"]),
+    "azure_delete_resource-group":       ("azure_delete_resource-group.yml", ["resource_group_name"]),
+
+
+
+
+
+
 }
+
 
 
 class PlaybookRequest(BaseModel):
     playbook: str
-    extra_vars: dict | None = None   # 参数注入
+    extra_vars: dict | None = None
 
 
 class TaskRequest(BaseModel):
@@ -51,14 +58,15 @@ def _execute(playbook_yaml: str, extra_vars: dict | None, timeout: int = 600):
 
         env = os.environ.copy()
         env["ANSIBLE_HOST_KEY_CHECKING"] = "False"
-        env["ANSIBLE_STDOUT_CALLBACK"] = "json"      # stdout 整体为 JSON，容器内解析
+        env["ANSIBLE_STDOUT_CALLBACK"] = "json"
         if MERAKI_DASHBOARD_API_KEY:
             env["MERAKI_DASHBOARD_API_KEY"] = MERAKI_DASHBOARD_API_KEY
 
-        # 注意：不再强制 --connection local。
-        # 本地执行的 playbook（Meraki 等）在 yml 里显式声明 connection: local；
-        # 网络设备 playbook（NX-OS 等）在 yml 里声明 network_cli 并靠 ansible_host 重定向。
         cmd = ["ansible-playbook", str(playbook_path), "-i", "localhost,"]
+
+        # 关键修复：强制指定 python 解释器，确保 Azure SDK 可被加载
+        cmd += ["-e", "ansible_python_interpreter=/usr/local/bin/python3.11"]
+
         if extra_vars:
             cmd += ["-e", json.dumps(extra_vars)]
 
@@ -84,7 +92,6 @@ def _extract_data(stdout: str):
                             "result.config", "result.commands", "result.updates", "msg"):
                     if key in host_result:
                         return host_result[key]
-        # 没有匹配键则返回最后一个任务的完整结果（如 nxos 配置模块的 changed/commands）
         if tasks:
             last_hosts = tasks[-1].get("hosts", {})
             for host_result in last_hosts.values():
@@ -135,3 +142,4 @@ def list_tasks(x_api_key: str = Header(None)):
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
