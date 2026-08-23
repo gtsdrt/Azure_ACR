@@ -22,12 +22,6 @@ TASK_REGISTRY = {
     "azure_create_nsg":                 ("azure_create_nsg.yml", ["resource_group_name", "nsg_names"]),
     "azure_associate_subnet_nsg":       ("azure_associate_subnet_nsg.yml", ["resource_group_name", "vnet_name", "nsg_name", "subnet_names"]),
     "azure_delete_resource-group":       ("azure_delete_resource-group.yml", ["resource_group_name"]),
-
-
-
-
-
-
 }
 
 
