@@ -35,8 +35,8 @@ jobs:
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
+          _dockerfilePathKey_: Dockerfile
+          _targetLabelKey_: build
           registryUrl: gtsdrtansible.azurecr.io
           registryUsername: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
