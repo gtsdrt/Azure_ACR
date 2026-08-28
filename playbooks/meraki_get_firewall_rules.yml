@@ -1,0 +1,15 @@
+- name: Get Meraki MX L3 firewall rules
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  collections:
+    - cisco.meraki
+  tasks:
+    - name: Get MX L3 firewall rules
+      cisco.meraki.networks_appliance_firewall_l3_firewall_rules_info:
+        meraki_api_key: "{{ lookup('env', 'MERAKI_DASHBOARD_API_KEY') }}"
+        networkId: "{{ network_id }}"
+      register: result
+    - name: Output
+      ansible.builtin.debug:
+        var: result.meraki_response

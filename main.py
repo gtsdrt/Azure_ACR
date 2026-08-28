@@ -16,12 +16,18 @@ PLAYBOOK_DIR = Path(os.getenv("PLAYBOOK_DIR", "/opt/ansible/playbooks"))
 TASK_REGISTRY = {
     "meraki_get_switch_ports":          ("meraki_get_switch_ports.yml",          ["serial"]),
     "meraki_get_switch_port_statuses":  ("meraki_get_switch_port_statuses.yml",  ["serial"]),
+    "meraki_get_firewall_rules":        ("meraki_get_firewall_rules.yml",        ["serial"]),
+
+
+
     "nxos_config_add_vrf":              ("nxos_add_vrf.yml",                     ["device_host", "vrf_name"]),
     "azure_create_vnet":                ("azure_create_vnet.yml",                ["resource_group_name", "vnet_name", "location"]),
     "azure_create_subnets":             ("azure_create_subnets.yml", ["resource_group_name", "vnet_name", "subnet_names", "subnet_prefixes"]),
     "azure_create_nsg":                 ("azure_create_nsg.yml", ["resource_group_name", "nsg_names"]),
     "azure_associate_subnet_nsg":       ("azure_associate_subnet_nsg.yml", ["resource_group_name", "vnet_name", "nsg_name", "subnet_names"]),
     "azure_delete_resource-group":       ("azure_delete_resource-group.yml", ["resource_group_name"]),
+    "meraki_get_firewall_rules":          ("meraki_get_firewall_rules.yml",          ["serial"]),
+
 }
 
 
