@@ -37,12 +37,12 @@ jobs:
           appSourcePath: ${{ github.workspace }}
           _dockerfilePathKey_: Dockerfile
           _targetLabelKey_: build
-          registryUrl: gtsdrtansible.azurecr.io
+          registryUrl: gtsdrtaiansible.azurecr.io
           registryUsername: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
           containerAppName: ansible-executor
           resourceGroup: ansible
-          imageToBuild: gtsdrtansible.azurecr.io/ansible-executor:${{ github.sha }}
+          imageToBuild: gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
           _buildArgumentsKey_: |
             _buildArgumentsValues_
 
