@@ -16,7 +16,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout to the branch
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Azure Login
@@ -26,11 +26,6 @@ jobs:
           tenant-id: ${{ secrets.ANSIBLEEXECUTOR_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.ANSIBLEEXECUTOR_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Verify Azure Login
-        run: |
-          az account show
-          az account set --subscription ${{ secrets.ANSIBLEEXECUTOR_AZURE_SUBSCRIPTION_ID }}
-
       - name: Login to ACR
         uses: azure/docker-login@v2
         with:
@@ -38,44 +33,14 @@ jobs:
           username: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
           password: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
 
-      - name: Build and push image to ACR
-        uses: azure/docker-login@v2
-        with:
-          login-server: gtsdrtaiansible.azurecr.io
-          username: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
-          password: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
-
-      - name: Build and push
+      - name: Build and push image
         run: |
           docker build -t gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }} .
           docker push gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
 
-      - name: Create Container App with temporary public image
-        run: |
-          az containerapp create \
-            --name ansible-executor \
-            --resource-group ai-api \
-            --environment managedEnvironment-aiapi-a791 \
-            --image mcr.microsoft.com/azuredocs/containerapps-helloworld:latest \
-            --ingress external \
-            --target-port 80 \
-            --system-assigned
-
-      - name: Grant AcrPull to Container App identity
-        run: |
-          PRINCIPAL_ID=$(az containerapp show -n ansible-executor -g ai-api --query identity.principalId -o tsv)
-          ACR_ID=$(az acr show -n gtsdrtaiansible --query id -o tsv)
-          az role assignment create \
-            --assignee-object-id $PRINCIPAL_ID \
-            --assignee-principal-type ServicePrincipal \
-            --role AcrPull \
-            --scope $ACR_ID
-
-      - name: Update Container App with private image
+      - name: Update Container App
         run: |
           az containerapp update \
             --name ansible-executor \
             --resource-group ai-api \
-            --image gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }} \
-            --registry-server gtsdrtaiansible.azurecr.io \
-            --registry-identity system
+            --image gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
