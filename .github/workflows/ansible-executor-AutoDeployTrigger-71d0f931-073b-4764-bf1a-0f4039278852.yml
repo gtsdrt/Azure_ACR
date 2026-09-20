@@ -1,28 +1,23 @@
 name: Trigger auto deployment for ansible-executor
 
-# When this action will be executed
 on:
-  # Automatically trigger it when detected changes in repo
   push:
-    branches: 
-      [ main ]
+    branches: [ main ]
     paths:
-    - '**'
-    - '.github/workflows/ansible-executor-AutoDeployTrigger-71d0f931-073b-4764-bf1a-0f4039278852.yml'
-
-  # Allow manual trigger 
-  workflow_dispatch:      
+      - '**'
+      - '.github/workflows/ansible-executor-AutoDeployTrigger-*.yml'
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions: 
-      id-token: write #This is required for requesting the OIDC JWT Token
-      contents: read #Required when GH token is used to authenticate with private repo
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout to the branch
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Azure Login
         uses: azure/login@v2
@@ -31,19 +26,28 @@ jobs:
           tenant-id: ${{ secrets.ANSIBLEEXECUTOR_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.ANSIBLEEXECUTOR_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and push container image to registry
+      - name: Verify Azure Login
+        run: |
+          az account show
+          az account set --subscription ${{ secrets.ANSIBLEEXECUTOR_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        uses: azure/docker-login@v2
+        with:
+          login-server: gtsdrtaiansible.azurecr.io
+          username: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
+          password: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }} .
+          docker push gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
+
+      - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
-          registryUrl: 
-          registryUsername: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
-          registryPassword: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
+          imageToDeploy: gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
           containerAppName: ansible-executor
-          resourceGroup: ai-api
-          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
-
-
+          resourceGroup: ai-api   # 注意：根据日志，实际资源组是 ai-api，请确认
+          # 如果 Container App 已存在，不需要再指定 containerAppEnvironment
+          # 如果需要创建，再提供 containerAppEnvironment 等参数
