@@ -65,7 +65,11 @@ jobs:
         run: |
           PRINCIPAL_ID=$(az containerapp show -n ansible-executor -g ai-api --query identity.principalId -o tsv)
           ACR_ID=$(az acr show -n gtsdrtaiansible --query id -o tsv)
-          az role assignment create --assignee $PRINCIPAL_ID --role AcrPull --scope $ACR_ID
+          az role assignment create \
+            --assignee-object-id $PRINCIPAL_ID \
+            --assignee-principal-type ServicePrincipal \
+            --role AcrPull \
+            --scope $ACR_ID
 
       - name: Update Container App with private image
         run: |
