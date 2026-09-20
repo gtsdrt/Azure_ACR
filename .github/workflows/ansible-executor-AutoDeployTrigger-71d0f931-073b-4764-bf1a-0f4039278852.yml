@@ -33,12 +33,26 @@ jobs:
           username: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
           password: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
 
-      - name: Build and push image
+      - name: Create Container App (if not exists)
         run: |
-          docker build -t gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }} .
-          docker push gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
+          az containerapp create \
+            --name ansible-executor \
+            --resource-group ai-api \
+            --environment managedEnvironment-aiapi-a791 \
+            --image mcr.microsoft.com/azuredocs/containerapps-helloworld:latest \
+            --ingress external \
+            --target-port 80 \
+            --system-assigned || echo "Container App already exists"
 
-      - name: Update Container App
+      - name: Configure ACR registry with managed identity
+        run: |
+          az containerapp registry set \
+            --name ansible-executor \
+            --resource-group ai-api \
+            --server gtsdrtaiansible.azurecr.io \
+            --identity system
+
+      - name: Update Container App with private image
         run: |
           az containerapp update \
             --name ansible-executor \
