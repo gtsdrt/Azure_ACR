@@ -38,16 +38,40 @@ jobs:
           username: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
           password: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Build and push image to ACR
+        uses: azure/docker-login@v2
+        with:
+          login-server: gtsdrtaiansible.azurecr.io
+          username: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
+          password: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
+
+      - name: Build and push
         run: |
           docker build -t gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }} .
           docker push gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
 
-      - name: Deploy to Azure Container App
-        uses: azure/container-apps-deploy-action@v2
-        with:
-          imageToDeploy: gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
-          containerAppName: ansible-executor
-          resourceGroup: ai-api   # 注意：根据日志，实际资源组是 ai-api，请确认
-          # 如果 Container App 已存在，不需要再指定 containerAppEnvironment
-          # 如果需要创建，再提供 containerAppEnvironment 等参数
+      - name: Create Container App with temporary public image
+        run: |
+          az containerapp create \
+            --name ansible-executor \
+            --resource-group ai-api \
+            --environment managedEnvironment-aiapi-a791 \
+            --image mcr.microsoft.com/azuredocs/containerapps-helloworld:latest \
+            --ingress external \
+            --target-port 80 \
+            --system-assigned
+
+      - name: Grant AcrPull to Container App identity
+        run: |
+          PRINCIPAL_ID=$(az containerapp show -n ansible-executor -g ai-api --query identity.principalId -o tsv)
+          ACR_ID=$(az acr show -n gtsdrtaiansible --query id -o tsv)
+          az role assignment create --assignee $PRINCIPAL_ID --role AcrPull --scope $ACR_ID
+
+      - name: Update Container App with private image
+        run: |
+          az containerapp update \
+            --name ansible-executor \
+            --resource-group ai-api \
+            --image gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }} \
+            --registry-server gtsdrtaiansible.azurecr.io \
+            --registry-identity system
