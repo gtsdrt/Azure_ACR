@@ -19,11 +19,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 构建推送镜像（用你配置好的 ACR 管理员账号密码 Secrets）
+      # 1. 登录 ACR 并推送新镜像
       - name: Login to ACR
         uses: azure/docker-login@v2
         with:
-          login-server: gtsdrtaiansible.azurecr.io # 确认拼写
+          login-server: gtsdrtaiansible.azurecr.io
           username: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_USERNAME }}
           password: ${{ secrets.ANSIBLEEXECUTOR_REGISTRY_PASSWORD }}
 
@@ -32,7 +32,7 @@ jobs:
           docker build -t gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }} .
           docker push gtsdrtaiansible.azurecr.io/ansible-executor:${{ github.sha }}
 
-      # Azure 登录，仅用于更新 Container App 的镜像版本
+      # 2. 登录 Azure 并更新 Container App 的镜像
       - name: Azure Login
         uses: azure/login@v2
         with:
