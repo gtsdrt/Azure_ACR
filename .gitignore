@@ -1,0 +1,32 @@
+# ---- macOS ----
+.DS_Store
+**/.DS_Store
+
+# ---- 本地草稿 / 临时文件（draft.txt 曾把明文密钥带进公开仓库）----
+draft*.txt
+*.draft
+*.local
+*.bak
+
+# ---- 凭据 / 环境变量（绝不要提交）----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*cert*
+*credential*
+*secret*
+*password*
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ---- 运行期 ----
+*.log
+*.db
+*.sqlite*
